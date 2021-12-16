@@ -1,0 +1,16 @@
+syntax = "proto3";
+package echopb;
+option go_package="../echopb";
+
+message Ping {
+    string text = 1;
+}
+
+message Pong {
+    string text = 1;
+}
+
+service EchoServer {
+    rpc Call (Ping) returns (Pong) {
+    }
+}
