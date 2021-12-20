@@ -11,21 +11,21 @@ import (
 )
 
 const (
-	SERVICE_NAME           = "echo"
-	END_POINTS_HTTP_ETCD   = "http://127.0.0.1:2379"
-	END_POINTS_HTTP_CONSUL = "http://127.0.0.1:8500"
-	END_POINTS_ZOOKEEPER   = "127.0.0.1:2181"
+	SERVICE_NAME             = "echo"
+	END_POINTS_HTTP_ETCD     = "http://127.0.0.1:2379"
+	END_POINTS_HTTP_CONSUL   = "http://127.0.0.1:8500"
+	END_POINTS_TCP_ZOOKEEPER = "127.0.0.1:2181"
 )
 
 func main() {
 
-	c := NewGoMicroClient(gomicro.EndpointType_MDNS)
+	c := NewGoMicroClient(gomicro.RegistryType_MDNS)
 	service := echopb.NewEchoServerService(SERVICE_NAME, c)
 
 	for i := 0; i < 10; i++ {
 		ctx := gomicro.NewContext(map[string]string{
-			"User_Name": "lory",
-			"User_Id":   fmt.Sprintf("%d", 10000+i),
+			"user_name": "lory",
+			"user_id":   fmt.Sprintf("%d", 10000+i),
 		}, 5)
 		log.Debugf("send request [%v]", i)
 		if pong, err := service.Call(ctx, &echopb.Ping{Text: "Ping"}); err != nil {
@@ -37,18 +37,18 @@ func main() {
 	}
 }
 
-func NewGoMicroClient(typ gomicro.EndpointType) (c client.Client) {
+func NewGoMicroClient(typ gomicro.RegistryType) (c client.Client) {
 	var g *gomicro.GoRPC
 	var endPoints []string
 	g = gomicro.NewGoRPC(typ)
 	switch typ {
-	case gomicro.EndpointType_MDNS:
-	case gomicro.EndpointType_ETCD:
+	case gomicro.RegistryType_MDNS:
+	case gomicro.RegistryType_ETCD:
 		endPoints = strings.Split(END_POINTS_HTTP_ETCD, ",")
-	case gomicro.EndpointType_CONSUL:
+	case gomicro.RegistryType_CONSUL:
 		endPoints = strings.Split(END_POINTS_HTTP_CONSUL, ",")
-	case gomicro.EndpointType_ZOOKEEPER:
-		endPoints = strings.Split(END_POINTS_ZOOKEEPER, ",")
+	case gomicro.RegistryType_ZOOKEEPER:
+		endPoints = strings.Split(END_POINTS_TCP_ZOOKEEPER, ",")
 	}
 	return g.NewClient(endPoints...)
 }

@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	SERVICE_NAME           = "echo"
-	END_POINTS_HTTP_ETCD   = "http://127.0.0.1:2379"
-	END_POINTS_HTTP_CONSUL = "http://127.0.0.1:8500"
-	END_POINTS_ZOOKEEPER   = "127.0.0.1:2181"
-	RPC_ADDR               = "127.0.0.1:8899" //RPC service listen address
+	SERVICE_NAME             = "echo"
+	END_POINTS_HTTP_ETCD     = "http://127.0.0.1:2379"
+	END_POINTS_HTTP_CONSUL   = "http://127.0.0.1:8500"
+	END_POINTS_TCP_ZOOKEEPER = "127.0.0.1:2181"
+	RPC_ADDR                 = "127.0.0.1:8899" //RPC service listen address
 )
 
 type EchoServerImpl struct {
@@ -22,7 +22,7 @@ type EchoServerImpl struct {
 
 func main() {
 	ch := make(chan bool, 1)
-	srv := NewGoMicroServer(gomicro.EndpointType_MDNS)
+	srv := NewGoMicroServer(gomicro.RegistryType_MDNS)
 	if err := echopb.RegisterEchoServerHandler(srv, new(EchoServerImpl)); err != nil {
 		log.Error(err.Error())
 		return
@@ -36,19 +36,19 @@ func main() {
 	<-ch //block infinite
 }
 
-func NewGoMicroServer(typ gomicro.EndpointType) (s server.Server) {
+func NewGoMicroServer(typ gomicro.RegistryType) (s server.Server) {
 	var g *gomicro.GoRPC
 	var endPoints []string
 
 	g = gomicro.NewGoRPC(typ)
 	switch typ {
-	case gomicro.EndpointType_MDNS:
-	case gomicro.EndpointType_ETCD:
+	case gomicro.RegistryType_MDNS:
+	case gomicro.RegistryType_ETCD:
 		endPoints = strings.Split(END_POINTS_HTTP_ETCD, ",")
-	case gomicro.EndpointType_CONSUL:
+	case gomicro.RegistryType_CONSUL:
 		endPoints = strings.Split(END_POINTS_HTTP_CONSUL, ",")
-	case gomicro.EndpointType_ZOOKEEPER:
-		endPoints = strings.Split(END_POINTS_ZOOKEEPER, ",")
+	case gomicro.RegistryType_ZOOKEEPER:
+		endPoints = strings.Split(END_POINTS_TCP_ZOOKEEPER, ",")
 	}
 
 	return g.NewServer(&gomicro.Discovery{
@@ -62,7 +62,9 @@ func NewGoMicroServer(typ gomicro.EndpointType) (s server.Server) {
 
 func (s *EchoServerImpl) Call(ctx context.Context, ping *echopb.Ping, pong *echopb.Pong) (err error) {
 	md := gomicro.FromContext(ctx)
-	log.Infof("md [%+v] req [%+v] user_id=%s", md, ping, gomicro.GetMetadata(ctx, "user_id"))
+	UserId, _ := md.Get("user_id")
+	UserName, _ := md.Get("user_name")
+	log.Infof("md [%+v] req [%+v] user id=[%s] user name [%s]", md, ping, UserId, UserName)
 	pong.Text = "Pong"
 	return
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/micro/go-micro/v2/service/grpc"
 	"github.com/micro/go-plugins/registry/consul/v2"
 	"github.com/micro/go-plugins/registry/zookeeper/v2"
-	"strings"
 	"time"
 )
 
@@ -24,27 +23,27 @@ const (
 	DEFAULT_RPC_TIMEOUT        = 30
 )
 
-type EndpointType int
+type RegistryType int
 
 const (
-	EndpointType_MDNS      EndpointType = 0 // multicast DNS
-	EndpointType_ETCD      EndpointType = 1 // etcd
-	EndpointType_CONSUL    EndpointType = 2 // consul
-	EndpointType_ZOOKEEPER EndpointType = 3 // zookeeper
+	RegistryType_MDNS      RegistryType = 0 // multicast DNS
+	RegistryType_ETCD      RegistryType = 1 // etcd
+	RegistryType_CONSUL    RegistryType = 2 // consul
+	RegistryType_ZOOKEEPER RegistryType = 3 // zookeeper
 )
 
-func (t EndpointType) String() string {
+func (t RegistryType) String() string {
 	switch t {
-	case EndpointType_MDNS:
-		return "EndpointType_MDNS"
-	case EndpointType_ETCD:
-		return "EndpointType_ETCD"
-	case EndpointType_CONSUL:
-		return "EndpointType_CONSUL"
-	case EndpointType_ZOOKEEPER:
-		return "EndpointType_ZOOKEEPER"
+	case RegistryType_MDNS:
+		return "RegistryType_MDNS"
+	case RegistryType_ETCD:
+		return "RegistryType_ETCD"
+	case RegistryType_CONSUL:
+		return "RegistryType_CONSUL"
+	case RegistryType_ZOOKEEPER:
+		return "RegistryType_ZOOKEEPER"
 	}
-	return "EndpointType_Unknown"
+	return "RegistryType_Unknown"
 }
 
 type Discovery struct {
@@ -56,15 +55,16 @@ type Discovery struct {
 }
 
 type GoRPC struct {
-	endpointType EndpointType //end point type
+	registryType RegistryType //end point type
 }
 
-func NewGoRPC(endpointType EndpointType) (g *GoRPC) {
+func NewGoRPC(registryType RegistryType) (g *GoRPC) {
 	return &GoRPC{
-		endpointType: endpointType,
+		registryType: registryType,
 	}
 }
 
+//NewContext
 //md -> metadata of RPC call, set to nil if have no any meta-data
 //timeout -> timeout seconds of RPC call, if <=0 will set it to DEFAULT_RPC_TIMEOUT
 func NewContext(md map[string]string, timeout int) context.Context {
@@ -76,28 +76,18 @@ func NewContext(md map[string]string, timeout int) context.Context {
 	return metadata.NewContext(ctx, md)
 }
 
-//get metadata from context
+//FromContext get metadata from context
 func FromContext(ctx context.Context) (md metadata.Metadata) {
 	md, _ = metadata.FromContext(ctx)
 	return
 }
 
-//get metadata value from context
-func GetMetadata(ctx context.Context, key string) (value string) {
-	key = strings.TrimSpace(key)
-	key = strings.ToLower(key)
-	if md, ok := metadata.FromContext(ctx); ok {
-		value = md[key]
-	}
-	return
-}
-
-//new a go-micro client
+//NewClient new a go-micro client
 func (g *GoRPC) NewClient(endPoints ...string) (c client.Client) { // returns go-micro client object
 
 	var options []service.Option
 
-	log.Debugf("endpoint type [%v] end points [%+v]", g.endpointType, endPoints)
+	log.Debugf("endpoint type [%v] end points [%+v]", g.registryType, endPoints)
 
 	reg := g.newRegistry(endPoints...)
 	if reg != nil {
@@ -108,11 +98,11 @@ func (g *GoRPC) NewClient(endPoints ...string) (c client.Client) { // returns go
 	return rpc.Client()
 }
 
-//new a go-micro server
+//NewServer new a go-micro server
 func (g *GoRPC) NewServer(discovery *Discovery) (s server.Server) { // returns go-micro server object
-	log.Debugf("endpoint type [%v] discovery [%+v]", g.endpointType, discovery)
+	log.Debugf("endpoint type [%v] discovery [%+v]", g.registryType, discovery)
 	if len(discovery.Endpoints) == 0 {
-		g.endpointType = EndpointType_MDNS
+		g.registryType = RegistryType_MDNS
 	}
 	if discovery.ServiceName == "" {
 		panic("discover service name is nil")
@@ -128,7 +118,7 @@ func (g *GoRPC) NewServer(discovery *Discovery) (s server.Server) { // returns g
 
 	var options []service.Option
 	if reg == nil {
-		panic(fmt.Errorf("[%+v] discovery [%+v] -> registry is nil", g.endpointType, discovery))
+		panic(fmt.Errorf("[%+v] discovery [%+v] -> registry is nil", g.registryType, discovery))
 	}
 
 	options = append(options, service.Registry(reg))
@@ -144,18 +134,18 @@ func (g *GoRPC) newRegistry(endPoints ...string) (r registry.Registry) {
 	var opts []registry.Option
 	opts = append(opts, registry.Addrs(endPoints...))
 
-	switch g.endpointType {
-	case EndpointType_MDNS:
+	switch g.registryType {
+	case RegistryType_MDNS:
 		r = mdns.NewRegistry()
-	case EndpointType_ETCD:
+	case RegistryType_ETCD:
 		r = etcd.NewRegistry(opts...)
-	case EndpointType_CONSUL:
+	case RegistryType_CONSUL:
 		r = consul.NewRegistry(opts...)
-	case EndpointType_ZOOKEEPER:
+	case RegistryType_ZOOKEEPER:
 		r = zookeeper.NewRegistry(opts...)
 	default:
-		panic(fmt.Errorf("end point type [%+v] illegal", g.endpointType))
+		panic(fmt.Errorf("end point type [%+v] illegal", g.registryType))
 	}
-	log.Debugf("[%+v] end points [%+v] -> registry [%+v]", g.endpointType, endPoints, r)
+	log.Debugf("[%+v] end points [%+v] -> registry [%+v]", g.registryType, endPoints, r)
 	return
 }
