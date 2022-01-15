@@ -5,16 +5,22 @@ import (
 	"fmt"
 	"github.com/civet148/log"
 	"github.com/micro/go-micro/v2/client"
+	cgrpc "github.com/micro/go-micro/v2/client/grpc"
 	"github.com/micro/go-micro/v2/metadata"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/registry/etcd"
 	"github.com/micro/go-micro/v2/registry/mdns"
 	"github.com/micro/go-micro/v2/server"
+	sgrpc "github.com/micro/go-micro/v2/server/grpc"
 	"github.com/micro/go-micro/v2/service"
 	"github.com/micro/go-micro/v2/service/grpc"
 	"github.com/micro/go-plugins/registry/consul/v2"
 	"github.com/micro/go-plugins/registry/zookeeper/v2"
 	"time"
+)
+
+var (
+	DefaultMaxMsgSize = 512 * 1024 * 1024 //default allow 512 MiB data transport
 )
 
 const (
@@ -55,12 +61,23 @@ type Discovery struct {
 }
 
 type GoRPC struct {
+	maxMsgSize   int
 	registryType RegistryType //end point type
 }
 
-func NewGoRPC(registryType RegistryType) (g *GoRPC) {
+func init() {
+
+}
+
+//sizes: max send or receive msg size in byte
+func NewGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
+	maxMsgSize := DefaultMaxMsgSize
+	if len(maxSize) != 0 {
+		maxMsgSize = maxSize[0]
+	}
 	return &GoRPC{
 		registryType: registryType,
+		maxMsgSize:   maxMsgSize,
 	}
 }
 
@@ -84,10 +101,11 @@ func FromContext(ctx context.Context) (md metadata.Metadata) {
 
 //NewClient new a go-micro client
 func (g *GoRPC) NewClient(endPoints ...string) (c client.Client) { // returns go-micro client object
-
 	var options []service.Option
 
 	log.Debugf("endpoint type [%v] end points [%+v]", g.registryType, endPoints)
+	optSend := cgrpc.MaxSendMsgSize(g.maxMsgSize)
+	optRecv := cgrpc.MaxRecvMsgSize(g.maxMsgSize)
 
 	reg := g.newRegistry(endPoints...)
 	if reg != nil {
@@ -95,7 +113,11 @@ func (g *GoRPC) NewClient(endPoints ...string) (c client.Client) { // returns go
 	}
 
 	rpc := grpc.NewService(options...)
-	return rpc.Client()
+	c = rpc.Client()
+	if err := c.Init(optSend, optRecv); err != nil {
+		log.Panic("initialize client option error [%s]", err)
+	}
+	return c
 }
 
 //NewServer new a go-micro server
@@ -127,7 +149,13 @@ func (g *GoRPC) NewServer(discovery *Discovery) (s server.Server) { // returns g
 	options = append(options, service.Name(discovery.ServiceName))
 	options = append(options, service.Address(discovery.RpcAddr))
 	rpc := grpc.NewService(options...)
-	return rpc.Server()
+	opt := sgrpc.MaxMsgSize(g.maxMsgSize)
+
+	s = rpc.Server()
+	if err := s.Init(opt); err != nil {
+		log.Panic("initialize server option error [%s]", err)
+	}
+	return s
 }
 
 func (g *GoRPC) newRegistry(endPoints ...string) (r registry.Registry) {
