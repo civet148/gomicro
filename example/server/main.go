@@ -11,10 +11,10 @@ import (
 
 const (
 	SERVICE_NAME             = "echo"
-	END_POINTS_HTTP_ETCD     = "http://127.0.0.1:2379"
-	END_POINTS_HTTP_CONSUL   = "http://127.0.0.1:8500"
-	END_POINTS_TCP_ZOOKEEPER = "127.0.0.1:2181"
-	RPC_ADDR                 = "127.0.0.1:8899" //RPC service listen address
+	END_POINTS_HTTP_ETCD     = "192.168.20.108:2379"
+	END_POINTS_HTTP_CONSUL   = "192.168.20.108:8500"
+	END_POINTS_TCP_ZOOKEEPER = "192.168.20.108:2181"
+	RPC_ADDR                 = "0.0.0.0:10899" //RPC service listen address
 )
 
 type EchoServerImpl struct {
