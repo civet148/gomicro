@@ -70,13 +70,13 @@ func newRpcServer(registryType RegistryType, discovery *Discovery, maxMsgSize in
 	rpc := grpc.NewService(options...)
 	opt := sgrpc.MaxMsgSize(maxMsgSize)
 
-	s.Server = rpc.Server()
-	s.Registry = reg
+	s.server = rpc.Server()
+	s.registry = reg
 	s.discovery = discovery
 	s.registryType = registryType
 	s.options = options
 	s.maxMsgSize = maxMsgSize
-	if err := s.Server.Init(opt); err != nil {
+	if err := s.server.Init(opt); err != nil {
 		log.Panic("initialize server option error [%s]", err)
 	}
 	return s

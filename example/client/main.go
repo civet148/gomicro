@@ -19,7 +19,7 @@ const (
 func main() {
 
 	c := NewGoMicroClient(gomicro.RegistryType_ETCD)
-	service := echopb.NewEchoServerService(SERVICE_NAME, c.Client)
+	service := echopb.NewEchoServerService(SERVICE_NAME, c)
 
 	for i := 0; i < 200; i++ {
 		ctx := gomicro.NewContext(map[string]string{

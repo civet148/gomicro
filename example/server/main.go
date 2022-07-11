@@ -14,7 +14,7 @@ const (
 	END_POINTS_HTTP_ETCD     = "192.168.20.108:2379"
 	END_POINTS_HTTP_CONSUL   = "192.168.20.108:8500"
 	END_POINTS_TCP_ZOOKEEPER = "192.168.20.108:2181"
-	RPC_ADDR                 = "0.0.0.0:10899" //RPC service listen address
+	RPC_ADDR                 = "0.0.0.0:10891" //RPC service listen address
 )
 
 type EchoServerImpl struct {
@@ -24,7 +24,7 @@ func main() {
 	log.SetLevel("debug")
 	ch := make(chan string, 0)
 	srv := NewGoMicroServer(gomicro.RegistryType_ETCD)
-	if err := echopb.RegisterEchoServerHandler(srv.Server, new(EchoServerImpl)); err != nil {
+	if err := echopb.RegisterEchoServerHandler(srv, new(EchoServerImpl)); err != nil {
 		log.Error(err.Error())
 		return
 	}
@@ -42,7 +42,7 @@ func main() {
 	}
 	time.Sleep(10*time.Second)
 	srv2 := NewGoMicroServer(gomicro.RegistryType_ETCD)
-	if err := echopb.RegisterEchoServerHandler(srv2.Server, new(EchoServerImpl)); err != nil {
+	if err := echopb.RegisterEchoServerHandler(srv2, new(EchoServerImpl)); err != nil {
 		log.Error(err.Error())
 		return
 	}

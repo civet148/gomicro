@@ -60,13 +60,13 @@ type GoRPC struct {
 }
 
 type GoRPCClient struct {
-	registry.Registry
-	client.Client
+	registry registry.Registry
+	client client.Client
 }
 
 type GoRPCServer struct {
-	registry.Registry
-	server.Server
+	registry registry.Registry
+	server server.Server
 	maxMsgSize   int
 	discovery    *Discovery
 	registryType RegistryType
@@ -121,10 +121,10 @@ func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-
 
 	rpc := grpc.NewService(options...)
 	c = &GoRPCClient{
-		Registry: reg,
-		Client: rpc.Client(),
+		registry: reg,
+		client: rpc.Client(),
 	}
-	if err := c.Client.Init(optSend, optRecv); err != nil {
+	if err := c.client.Init(optSend, optRecv); err != nil {
 		log.Panic("initialize client option error [%s]", err)
 	}
 	return c
@@ -132,25 +132,5 @@ func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-
 
 //NewServer new a go-micro server
 func (g *GoRPC) NewServer(discovery *Discovery) (s *GoRPCServer) { // returns go-micro server object
-	log.Debugf("endpoint type [%v] discovery [%+v]", g.registryType, discovery)
 	return newRpcServer(g.registryType, discovery, g.maxMsgSize)
-}
-
-func (s *GoRPCServer) Close() error {
-	services, err := s.Registry.GetService(s.discovery.ServiceName)
-	if err != nil {
-		return log.Errorf("registry get service by service name %s error [%s]", s.discovery.ServiceName, err)
-	}
-	log.Infof("service count %d", len(services))
-	for _, v := range services {
-		err = s.Registry.Deregister(v)
-		if err != nil {
-			return log.Errorf("deregister service by service name %s error [%s]", s.discovery.ServiceName, err)
-		}
-	}
-	if err := s.Server.Stop(); err != nil {
-		return log.Errorf("server stop error [%s]", err)
-	}
-	log.Infof("server stop [OK]")
-	return nil
 }
