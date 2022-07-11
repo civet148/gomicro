@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/civet148/gomicro"
-	"github.com/civet148/gomicro/example/echopb"
+	"github.com/civet148/gomicro/v2"
+	"github.com/civet148/gomicro/v2/example/echopb"
 	"github.com/civet148/log"
-	"github.com/micro/go-micro/v2/client"
 	"strings"
 	"time"
 )
@@ -19,25 +18,25 @@ const (
 
 func main() {
 
-	c := NewGoMicroClient(gomicro.RegistryType_MDNS)
-	service := echopb.NewEchoServerService(SERVICE_NAME, c)
+	c := NewGoMicroClient(gomicro.RegistryType_ETCD)
+	service := echopb.NewEchoServerService(SERVICE_NAME, c.Client)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 200; i++ {
 		ctx := gomicro.NewContext(map[string]string{
 			"user_name": "lory",
 			"user_id":   fmt.Sprintf("%d", 10000+i),
-		}, 5)
+		}, 3)
 		log.Debugf("send request [%v]", i)
 		if pong, err := service.Call(ctx, &echopb.Ping{Text: "Ping"}); err != nil {
 			log.Error(err.Error())
 		} else {
 			log.Infof("server response [%+v]", pong)
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 
-func NewGoMicroClient(typ gomicro.RegistryType) (c client.Client) {
+func NewGoMicroClient(typ gomicro.RegistryType) (c *gomicro.GoRPCClient) {
 	var g *gomicro.GoRPC
 	var endPoints []string
 	g = gomicro.NewGoRPC(typ)

@@ -2,20 +2,14 @@ package gomicro
 
 import (
 	"context"
-	"fmt"
 	"github.com/civet148/log"
 	"github.com/micro/go-micro/v2/client"
 	cgrpc "github.com/micro/go-micro/v2/client/grpc"
 	"github.com/micro/go-micro/v2/metadata"
 	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/registry/etcd"
-	"github.com/micro/go-micro/v2/registry/mdns"
 	"github.com/micro/go-micro/v2/server"
-	sgrpc "github.com/micro/go-micro/v2/server/grpc"
 	"github.com/micro/go-micro/v2/service"
 	"github.com/micro/go-micro/v2/service/grpc"
-	"github.com/micro/go-plugins/registry/consul/v2"
-	"github.com/micro/go-plugins/registry/zookeeper/v2"
 	"time"
 )
 
@@ -65,6 +59,20 @@ type GoRPC struct {
 	registryType RegistryType //end point type
 }
 
+type GoRPCClient struct {
+	registry.Registry
+	client.Client
+}
+
+type GoRPCServer struct {
+	registry.Registry
+	server.Server
+	maxMsgSize   int
+	discovery    *Discovery
+	registryType RegistryType
+	options      []service.Option
+}
+
 func init() {
 
 }
@@ -100,80 +108,49 @@ func FromContext(ctx context.Context) (md metadata.Metadata) {
 }
 
 //NewClient new a go-micro client
-func (g *GoRPC) NewClient(endPoints ...string) (c client.Client) { // returns go-micro client object
+func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-micro client object
 	var options []service.Option
-
 	log.Debugf("endpoint type [%v] end points [%+v]", g.registryType, endPoints)
 	optSend := cgrpc.MaxSendMsgSize(g.maxMsgSize)
 	optRecv := cgrpc.MaxRecvMsgSize(g.maxMsgSize)
 
-	reg := g.newRegistry(endPoints...)
+	reg := newRegistry(g.registryType, endPoints...)
 	if reg != nil {
 		options = append(options, service.Registry(reg))
 	}
 
 	rpc := grpc.NewService(options...)
-	c = rpc.Client()
-	if err := c.Init(optSend, optRecv); err != nil {
+	c = &GoRPCClient{
+		Registry: reg,
+		Client: rpc.Client(),
+	}
+	if err := c.Client.Init(optSend, optRecv); err != nil {
 		log.Panic("initialize client option error [%s]", err)
 	}
 	return c
 }
 
 //NewServer new a go-micro server
-func (g *GoRPC) NewServer(discovery *Discovery) (s server.Server) { // returns go-micro server object
+func (g *GoRPC) NewServer(discovery *Discovery) (s *GoRPCServer) { // returns go-micro server object
 	log.Debugf("endpoint type [%v] discovery [%+v]", g.registryType, discovery)
-	if len(discovery.Endpoints) == 0 {
-		g.registryType = RegistryType_MDNS
-	}
-	if discovery.ServiceName == "" {
-		panic("discover service name is nil")
-	}
-	if discovery.Interval == 0 {
-		discovery.Interval = DISCOVERY_DEFAULT_INTERVAL
-	}
-	if discovery.TTL == 0 {
-		discovery.TTL = DISCOVERY_DEFAULT_TTL
-	}
-
-	reg := g.newRegistry(discovery.Endpoints...)
-
-	var options []service.Option
-	if reg == nil {
-		panic(fmt.Errorf("[%+v] discovery [%+v] -> registry is nil", g.registryType, discovery))
-	}
-
-	options = append(options, service.Registry(reg))
-	options = append(options, service.RegisterInterval(time.Duration(discovery.Interval)*time.Second))
-	options = append(options, service.RegisterTTL(time.Duration(discovery.TTL)*time.Second))
-	options = append(options, service.Name(discovery.ServiceName))
-	options = append(options, service.Address(discovery.RpcAddr))
-	rpc := grpc.NewService(options...)
-	opt := sgrpc.MaxMsgSize(g.maxMsgSize)
-
-	s = rpc.Server()
-	if err := s.Init(opt); err != nil {
-		log.Panic("initialize server option error [%s]", err)
-	}
-	return s
+	return newRpcServer(g.registryType, discovery, g.maxMsgSize)
 }
 
-func (g *GoRPC) newRegistry(endPoints ...string) (r registry.Registry) {
-	var opts []registry.Option
-	opts = append(opts, registry.Addrs(endPoints...))
-
-	switch g.registryType {
-	case RegistryType_MDNS:
-		r = mdns.NewRegistry()
-	case RegistryType_ETCD:
-		r = etcd.NewRegistry(opts...)
-	case RegistryType_CONSUL:
-		r = consul.NewRegistry(opts...)
-	case RegistryType_ZOOKEEPER:
-		r = zookeeper.NewRegistry(opts...)
-	default:
-		panic(fmt.Errorf("end point type [%+v] illegal", g.registryType))
+func (s *GoRPCServer) Close() error {
+	services, err := s.Registry.GetService(s.discovery.ServiceName)
+	if err != nil {
+		return log.Errorf("registry get service by service name %s error [%s]", s.discovery.ServiceName, err)
 	}
-	log.Debugf("[%+v] end points [%+v] -> registry [%+v]", g.registryType, endPoints, r)
-	return
+	log.Infof("service count %d", len(services))
+	for _, v := range services {
+		err = s.Registry.Deregister(v)
+		if err != nil {
+			return log.Errorf("deregister service by service name %s error [%s]", s.discovery.ServiceName, err)
+		}
+	}
+	if err := s.Server.Stop(); err != nil {
+		return log.Errorf("server stop error [%s]", err)
+	}
+	log.Infof("server stop [OK]")
+	return nil
 }

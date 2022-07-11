@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/civet148/gomicro"
-	"github.com/civet148/gomicro/example/echopb"
+	"github.com/civet148/gomicro/v2"
+	"github.com/civet148/gomicro/v2/example/echopb"
 	"github.com/civet148/log"
-	"github.com/micro/go-micro/v2/server"
 	"strings"
+	"time"
 )
 
 const (
@@ -21,22 +21,41 @@ type EchoServerImpl struct {
 }
 
 func main() {
-	ch := make(chan bool, 1)
-	srv := NewGoMicroServer(gomicro.RegistryType_MDNS)
-	if err := echopb.RegisterEchoServerHandler(srv, new(EchoServerImpl)); err != nil {
+	log.SetLevel("debug")
+	ch := make(chan string, 0)
+	srv := NewGoMicroServer(gomicro.RegistryType_ETCD)
+	if err := echopb.RegisterEchoServerHandler(srv.Server, new(EchoServerImpl)); err != nil {
 		log.Error(err.Error())
 		return
 	}
-	//go-micro v1.16 call srv.Run() v1.18 call srv.Start()
+	//go-micro v1.16 call srv.Run() v1.18+ call srv.Start()
 	if err := srv.Start(); err != nil {
 		log.Error(err.Error())
 		return
 	}
+	log.Infof("micro server will deregister after few seconds")
+	time.Sleep(15*time.Second)
+	if err := srv.Close(); err != nil {
+		log.Errorf(err.Error())
+	} else {
+		log.Infof("micro server deregister ok")
+	}
+	time.Sleep(10*time.Second)
+	srv2 := NewGoMicroServer(gomicro.RegistryType_ETCD)
+	if err := echopb.RegisterEchoServerHandler(srv2.Server, new(EchoServerImpl)); err != nil {
+		log.Error(err.Error())
+		return
+	}
+	//go-micro v1.16 call srv.Run() v1.18+ call srv.Start()
+	if err := srv2.Start(); err != nil {
+		log.Error(err.Error())
+		return
+	}
 
-	<-ch //block infinite
+	<- ch
 }
 
-func NewGoMicroServer(typ gomicro.RegistryType) (s server.Server) {
+func NewGoMicroServer(typ gomicro.RegistryType) (s *gomicro.GoRPCServer) {
 	var g *gomicro.GoRPC
 	var endPoints []string
 
@@ -64,7 +83,7 @@ func (s *EchoServerImpl) Call(ctx context.Context, ping *echopb.Ping, pong *echo
 	md := gomicro.FromContext(ctx)
 	UserId, _ := md.Get("user_id")
 	UserName, _ := md.Get("user_name")
-	log.Infof("md [%+v] req [%+v] user id=[%s] user name [%s]", md, ping, UserId, UserName)
+	log.Debugf("md [%+v] req [%+v] user id=[%s] user name [%s]", md, ping, UserId, UserName)
 	pong.Text = "Pong"
 	return
 }
