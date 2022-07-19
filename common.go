@@ -11,8 +11,41 @@ import (
 	"github.com/micro/go-micro/v2/service/grpc"
 	"github.com/micro/go-plugins/registry/consul/v2"
 	"github.com/micro/go-plugins/registry/zookeeper/v2"
+	"strings"
 	"time"
 )
+
+/*
+	"etcd://192.168.1.108:2379,192.168.1.109:2379"
+	"consul://192.168.1.108:8500,192.168.1.109:8500"
+	"zk://192.168.1.108:2181, 192.168.1.109:2181"
+*/
+func ParseRegistry(strRegistry string) (typ RegistryType, endpoints []string) {
+	var strAddress string
+	//--registry "etcd://127.0.0.1:2379,127.0.0.1:2380"
+	ss := strings.Split(strRegistry, "://")
+	count := len(ss)
+	if count > 1 {
+		strRegName := strings.ToLower(ss[0])
+		strAddress = strings.ToLower(ss[1])
+		switch strRegName {
+		case "etcd":
+			typ = RegistryType_ETCD
+		case "consul":
+			typ = RegistryType_CONSUL
+		case "zookeeper", "zk":
+			typ = RegistryType_ZOOKEEPER
+		default:
+			log.Warnf("Unknown registry name [%s], use default MDNS", strRegName)
+			typ = RegistryType_MDNS
+		}
+	} else {
+		typ = RegistryType_MDNS
+	}
+	log.Infof("registry type [%s] address %+v", typ.String(), strAddress)
+	endpoints = strings.Split(strAddress, ",")
+	return typ, endpoints
+}
 
 func newRegistry(registryType RegistryType, endPoints ...string) (r registry.Registry) {
 	var opts []registry.Option
