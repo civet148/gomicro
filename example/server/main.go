@@ -64,10 +64,10 @@ func NewGoMicroServer(typ gomicro.RegistryType) (s *gomicro.GoRPCServer) {
 	case gomicro.RegistryType_MDNS:
 	case gomicro.RegistryType_ETCD:
 		endPoints = strings.Split(END_POINTS_HTTP_ETCD, ",")
-	case gomicro.RegistryType_CONSUL:
-		endPoints = strings.Split(END_POINTS_HTTP_CONSUL, ",")
-	case gomicro.RegistryType_ZOOKEEPER:
-		endPoints = strings.Split(END_POINTS_TCP_ZOOKEEPER, ",")
+	//case gomicro.RegistryType_CONSUL:
+	//	endPoints = strings.Split(END_POINTS_HTTP_CONSUL, ",")
+	//case gomicro.RegistryType_ZOOKEEPER:
+	//	endPoints = strings.Split(END_POINTS_TCP_ZOOKEEPER, ",")
 	}
 
 	return g.NewServer(&gomicro.Discovery{
