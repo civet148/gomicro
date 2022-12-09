@@ -1,7 +1,6 @@
 package gomicro
 
 import (
-	"fmt"
 	"github.com/civet148/log"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/registry/etcd"
@@ -9,8 +8,6 @@ import (
 	sgrpc "github.com/micro/go-micro/v2/server/grpc"
 	"github.com/micro/go-micro/v2/service"
 	"github.com/micro/go-micro/v2/service/grpc"
-	"github.com/micro/go-plugins/registry/consul/v2"
-	"github.com/micro/go-plugins/registry/zookeeper/v2"
 	"strings"
 	"time"
 )
@@ -31,10 +28,10 @@ func ParseRegistry(strRegistry string) (typ RegistryType, endpoints []string) {
 		switch strRegName {
 		case "etcd":
 			typ = RegistryType_ETCD
-		case "consul":
-			typ = RegistryType_CONSUL
-		case "zookeeper", "zk":
-			typ = RegistryType_ZOOKEEPER
+		//case "consul":
+		//	typ = RegistryType_CONSUL
+		//case "zookeeper", "zk":
+		//	typ = RegistryType_ZOOKEEPER
 		default:
 			log.Warnf("Unknown registry name [%s], use default MDNS", strRegName)
 			typ = RegistryType_MDNS
@@ -56,12 +53,12 @@ func newRegistry(registryType RegistryType, endPoints ...string) (r registry.Reg
 		r = mdns.NewRegistry()
 	case RegistryType_ETCD:
 		r = etcd.NewRegistry(opts...)
-	case RegistryType_CONSUL:
-		r = consul.NewRegistry(opts...)
-	case RegistryType_ZOOKEEPER:
-		r = zookeeper.NewRegistry(opts...)
+	//case RegistryType_CONSUL:
+	//	r = consul.NewRegistry(opts...)
+	//case RegistryType_ZOOKEEPER:
+	//	r = zookeeper.NewRegistry(opts...)
 	default:
-		panic(fmt.Errorf("end point type [%+v] illegal", registryType))
+		log.Panic("end point type [%+v] illegal", registryType)
 	}
 	log.Debugf("[%+v] end points %+v -> registry [%+v]", registryType, endPoints, r)
 	return
@@ -70,7 +67,7 @@ func newRegistry(registryType RegistryType, endPoints ...string) (r registry.Reg
 func newOptions(registryType RegistryType,  discovery *Discovery, reg registry.Registry) []service.Option {
 	var options []service.Option
 	if reg == nil {
-		panic(fmt.Errorf("[%+v] discovery [%+v] -> registry is nil", registryType, discovery))
+		log.Panic("[%+v] discovery [%+v] -> registry is nil", registryType, discovery)
 	}
 	options = append(options, service.Registry(reg))
 	options = append(options, service.RegisterInterval(time.Duration(discovery.Interval)*time.Second))
@@ -88,7 +85,7 @@ func newRpcServer(registryType RegistryType, discovery *Discovery, maxMsgSize in
 		registryType = RegistryType_MDNS
 	}
 	if discovery.ServiceName == "" {
-		panic("discover service name is nil")
+		log.Panic("discover service name is nil")
 	}
 	if discovery.Interval == 0 {
 		discovery.Interval = DISCOVERY_DEFAULT_INTERVAL

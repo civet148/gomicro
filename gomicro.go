@@ -28,8 +28,8 @@ type RegistryType int
 const (
 	RegistryType_MDNS      RegistryType = 0 // multicast DNS
 	RegistryType_ETCD      RegistryType = 1 // etcd
-	RegistryType_CONSUL    RegistryType = 2 // consul
-	RegistryType_ZOOKEEPER RegistryType = 3 // zookeeper
+	//RegistryType_CONSUL    RegistryType = 2 // consul
+	//RegistryType_ZOOKEEPER RegistryType = 3 // zookeeper
 )
 
 func (t RegistryType) String() string {
@@ -38,10 +38,10 @@ func (t RegistryType) String() string {
 		return "RegistryType_MDNS"
 	case RegistryType_ETCD:
 		return "RegistryType_ETCD"
-	case RegistryType_CONSUL:
-		return "RegistryType_CONSUL"
-	case RegistryType_ZOOKEEPER:
-		return "RegistryType_ZOOKEEPER"
+	//case RegistryType_CONSUL:
+	//	return "RegistryType_CONSUL"
+	//case RegistryType_ZOOKEEPER:
+	//	return "RegistryType_ZOOKEEPER"
 	}
 	return "RegistryType_Unknown"
 }
