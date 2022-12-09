@@ -2,7 +2,6 @@ package gomicro
 
 import (
 	"context"
-	"fmt"
 	"github.com/civet148/log"
 	"github.com/micro/go-micro/v2/client"
 	cgrpc "github.com/micro/go-micro/v2/client/grpc"
@@ -14,8 +13,8 @@ import (
 	sgrpc "github.com/micro/go-micro/v2/server/grpc"
 	"github.com/micro/go-micro/v2/service"
 	"github.com/micro/go-micro/v2/service/grpc"
-	"github.com/micro/go-plugins/registry/consul/v2"
-	"github.com/micro/go-plugins/registry/zookeeper/v2"
+	//"github.com/micro/go-plugins/registry/consul/v2"
+	//"github.com/micro/go-plugins/registry/zookeeper/v2"
 	"time"
 )
 
@@ -34,8 +33,8 @@ type RegistryType int
 const (
 	RegistryType_MDNS      RegistryType = 0 // multicast DNS
 	RegistryType_ETCD      RegistryType = 1 // etcd
-	RegistryType_CONSUL    RegistryType = 2 // consul
-	RegistryType_ZOOKEEPER RegistryType = 3 // zookeeper
+	//RegistryType_CONSUL    RegistryType = 2 // consul
+	//RegistryType_ZOOKEEPER RegistryType = 3 // zookeeper
 )
 
 func (t RegistryType) String() string {
@@ -44,10 +43,10 @@ func (t RegistryType) String() string {
 		return "RegistryType_MDNS"
 	case RegistryType_ETCD:
 		return "RegistryType_ETCD"
-	case RegistryType_CONSUL:
-		return "RegistryType_CONSUL"
-	case RegistryType_ZOOKEEPER:
-		return "RegistryType_ZOOKEEPER"
+	//case RegistryType_CONSUL:
+	//	return "RegistryType_CONSUL"
+	//case RegistryType_ZOOKEEPER:
+	//	return "RegistryType_ZOOKEEPER"
 	}
 	return "RegistryType_Unknown"
 }
@@ -127,7 +126,7 @@ func (g *GoRPC) NewServer(discovery *Discovery) (s server.Server) { // returns g
 		g.registryType = RegistryType_MDNS
 	}
 	if discovery.ServiceName == "" {
-		panic("discover service name is nil")
+		log.Panic("discover service name is nil")
 	}
 	if discovery.Interval == 0 {
 		discovery.Interval = DISCOVERY_DEFAULT_INTERVAL
@@ -140,7 +139,7 @@ func (g *GoRPC) NewServer(discovery *Discovery) (s server.Server) { // returns g
 
 	var options []service.Option
 	if reg == nil {
-		panic(fmt.Errorf("[%+v] discovery [%+v] -> registry is nil", g.registryType, discovery))
+		log.Panic("[%+v] discovery [%+v] -> registry is nil", g.registryType, discovery)
 	}
 
 	options = append(options, service.Registry(reg))
@@ -167,12 +166,12 @@ func (g *GoRPC) newRegistry(endPoints ...string) (r registry.Registry) {
 		r = mdns.NewRegistry()
 	case RegistryType_ETCD:
 		r = etcd.NewRegistry(opts...)
-	case RegistryType_CONSUL:
-		r = consul.NewRegistry(opts...)
-	case RegistryType_ZOOKEEPER:
-		r = zookeeper.NewRegistry(opts...)
+	//case RegistryType_CONSUL:
+	//	r = consul.NewRegistry(opts...)
+	//case RegistryType_ZOOKEEPER:
+	//	r = zookeeper.NewRegistry(opts...)
 	default:
-		panic(fmt.Errorf("end point type [%+v] illegal", g.registryType))
+		log.Panic("end point type [%+v] illegal", g.registryType)
 	}
 	log.Debugf("[%+v] end points [%+v] -> registry [%+v]", g.registryType, endPoints, r)
 	return
