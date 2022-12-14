@@ -94,10 +94,9 @@ func NewGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
 //timeout -> timeout seconds of RPC call, if <=0 will set it to DEFAULT_RPC_TIMEOUT
 func NewContext(md map[string]string, timeout int) context.Context {
 	var ctx = context.Background()
-	if timeout <= 0 {
-		timeout = DEFAULT_RPC_TIMEOUT
+	if timeout > 0 {
+		ctx, _ = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	}
-	ctx, _ = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	return metadata.NewContext(ctx, md)
 }
 
