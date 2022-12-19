@@ -64,7 +64,7 @@ func newRegistry(registryType RegistryType, endPoints ...string) (r registry.Reg
 	return
 }
 
-func newOptions(registryType RegistryType,  discovery *Discovery, reg registry.Registry) []service.Option {
+func newOptions(registryType RegistryType,  discovery *discovery, reg registry.Registry) []service.Option {
 	var options []service.Option
 	if reg == nil {
 		log.Panic("[%+v] discovery [%+v] -> registry is nil", registryType, discovery)
@@ -79,7 +79,7 @@ func newOptions(registryType RegistryType,  discovery *Discovery, reg registry.R
 
 
 //NewServer new a go-micro server
-func newRpcServer(registryType RegistryType, discovery *Discovery, maxMsgSize int) (s *GoRPCServer) { // returns go-micro server object
+func newRpcServer(registryType RegistryType, discovery *discovery, maxMsgSize int) (s *GoRPCServer) { // returns go-micro server object
 	log.Debugf("endpoint type [%v] discovery [%+v]", registryType, discovery)
 	if len(discovery.Endpoints) == 0 {
 		registryType = RegistryType_MDNS

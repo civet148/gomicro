@@ -46,7 +46,14 @@ func (t RegistryType) String() string {
 	return "RegistryType_Unknown"
 }
 
-type Discovery struct {
+type ServerOption struct {
+	ServiceName string   // register service name [required]
+	RpcAddr     string   // register server RPC address [required]
+	Interval    int      // register interval default 3 seconds [optional]
+	TTL         int      // register TTL default 10 seconds [optional]
+}
+
+type discovery struct {
 	ServiceName string   // register service name [required]
 	RpcAddr     string   // register server RPC address [required]
 	Interval    int      // register interval default 3 seconds [optional]
@@ -68,7 +75,7 @@ type GoRPCServer struct {
 	registry registry.Registry
 	server server.Server
 	maxMsgSize   int
-	discovery    *Discovery
+	discovery    *discovery
 	registryType RegistryType
 	options      []service.Option
 }
@@ -77,8 +84,32 @@ func init() {
 
 }
 
+func NewClient(strRegistry string) (c *GoRPCClient) {
+	var g *GoRPC
+	var endPoints []string
+	var typ RegistryType
+	typ, endPoints = parseRegistry(strRegistry)
+	g = newGoRPC(typ)
+	return g.NewClient(endPoints...)
+}
+
+func NewServer(strRegistry string, option *ServerOption) (s *GoRPCServer) {
+	var g *GoRPC
+	var endPoints []string
+	var typ RegistryType
+	typ, endPoints = parseRegistry(strRegistry)
+	g = newGoRPC(typ)
+	return g.NewServer(&discovery{
+		ServiceName: option.ServiceName,
+		RpcAddr:     option.RpcAddr,
+		Interval:    option.Interval,
+		TTL:         option.TTL,
+		Endpoints:   endPoints,
+	})
+}
+
 //sizes: max send or receive msg size in byte
-func NewGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
+func newGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
 	maxMsgSize := DefaultMaxMsgSize
 	if len(maxSize) != 0 {
 		maxMsgSize = maxSize[0]
@@ -91,13 +122,16 @@ func NewGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
 
 //NewContext
 //md -> metadata of RPC call, set to nil if have no any meta-data
-//timeout -> timeout seconds of RPC call, if <=0 will set it to DEFAULT_RPC_TIMEOUT
-func NewContext(md map[string]string, timeout int) context.Context {
-	var ctx = context.Background()
-	if timeout > 0 {
-		ctx, _ = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-	}
-	return metadata.NewContext(ctx, md)
+func NewContext(md map[string]string) context.Context {
+	return metadata.NewContext(context.Background(), md)
+}
+
+//NewContextWithTimeout
+//md -> metadata of RPC call, set to nil if have no any meta-data
+//timeout -> timeout seconds of RPC call
+func NewContextWithTimeout(md map[string]string, timeout int) (context.Context, context.CancelFunc) {
+	ctx, closer := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	return metadata.NewContext(ctx, md), closer
 }
 
 //FromContext get metadata from context
@@ -130,6 +164,6 @@ func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-
 }
 
 //NewServer new a go-micro server
-func (g *GoRPC) NewServer(discovery *Discovery) (s *GoRPCServer) { // returns go-micro server object
+func (g *GoRPC) NewServer(discovery *discovery) (s *GoRPCServer) { // returns go-micro server object
 	return newRpcServer(g.registryType, discovery, g.maxMsgSize)
 }
