@@ -64,7 +64,7 @@ func newRegistry(registryType RegistryType, endPoints ...string) (r registry.Reg
 	return
 }
 
-func newOptions(registryType RegistryType,  discovery *discovery, reg registry.Registry) []service.Option {
+func newOptions(registryType RegistryType, discovery *discovery, reg registry.Registry, md map[string]string) []service.Option {
 	var options []service.Option
 	if reg == nil {
 		log.Panic("[%+v] discovery [%+v] -> registry is nil", registryType, discovery)
@@ -74,12 +74,12 @@ func newOptions(registryType RegistryType,  discovery *discovery, reg registry.R
 	options = append(options, service.RegisterTTL(time.Duration(discovery.TTL)*time.Second))
 	options = append(options, service.Name(discovery.ServiceName))
 	options = append(options, service.Address(discovery.RpcAddr))
+	options = append(options, service.Metadata(md))
 	return options
 }
 
-
 //NewServer new a go-micro server
-func newRpcServer(registryType RegistryType, discovery *discovery, maxMsgSize int) (s *GoRPCServer) { // returns go-micro server object
+func newRpcServer(registryType RegistryType, discovery *discovery, maxMsgSize int, md map[string]string) (s *GoRPCServer) { // returns go-micro server object
 	log.Debugf("endpoint type [%v] discovery [%+v]", registryType, discovery)
 	if len(discovery.Endpoints) == 0 {
 		registryType = RegistryType_MDNS
@@ -96,11 +96,11 @@ func newRpcServer(registryType RegistryType, discovery *discovery, maxMsgSize in
 	s = &GoRPCServer{}
 	var options []service.Option
 	reg := newRegistry(registryType, discovery.Endpoints...)
-	options = newOptions(registryType, discovery, reg)
+	options = newOptions(registryType, discovery, reg, md)
 	rpc := grpc.NewService(options...)
 	opt := sgrpc.MaxMsgSize(maxMsgSize)
-
-	s.server = rpc.Server()
+	rpcSvr := rpc.Server()
+	s.server = rpcSvr
 	s.registry = reg
 	s.discovery = discovery
 	s.registryType = registryType

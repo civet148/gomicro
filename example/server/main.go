@@ -8,12 +8,12 @@ import (
 )
 
 const (
-	SERVICE_NAME             = "echo"
-	END_POINTS_MDNS         = "mdns"
-	END_POINTS_HTTP_ETCD     = "etcd://192.168.20.108:2379"
-	END_POINTS_HTTP_CONSUL   = "consul://192.168.20.108:8500"
-	END_POINTS_TCP_ZOOKEEPER = "zk://192.168.20.108:2181"
-	RPC_ADDR                 = "0.0.0.0:10891" //RPC service listen address
+	SERVICE_NAME         = "echo"
+	END_POINTS_MDNS      = "mdns"
+	END_POINTS_HTTP_ETCD = "etcd://192.168.2.9:2379"
+	//END_POINTS_HTTP_CONSUL   = "consul://192.168.20.108:8500"
+	//END_POINTS_TCP_ZOOKEEPER = "zk://192.168.20.108:2181"
+	RPC_ADDR = "0.0.0.0:10891" //RPC service listen address
 )
 
 type EchoServerImpl struct {
@@ -22,11 +22,14 @@ type EchoServerImpl struct {
 func main() {
 	log.SetLevel("debug")
 	ch := make(chan string, 0)
-	srv := gomicro.NewServer(END_POINTS_MDNS, &gomicro.ServerOption{
+	srv := gomicro.NewServer(END_POINTS_HTTP_ETCD, &gomicro.ServerOption{
 		ServiceName: SERVICE_NAME,
 		RpcAddr:     RPC_ADDR,
 		Interval:    3,
 		TTL:         10,
+		Metadata: map[string]string{
+			"register_name": "echo-server",
+		},
 	})
 	if err := echopb.RegisterEchoServerHandler(srv, new(EchoServerImpl)); err != nil {
 		log.Error(err.Error())

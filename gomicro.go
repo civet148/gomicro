@@ -26,8 +26,8 @@ const (
 type RegistryType int
 
 const (
-	RegistryType_MDNS      RegistryType = 0 // multicast DNS
-	RegistryType_ETCD      RegistryType = 1 // etcd
+	RegistryType_MDNS RegistryType = 0 // multicast DNS
+	RegistryType_ETCD RegistryType = 1 // etcd
 	//RegistryType_CONSUL    RegistryType = 2 // consul
 	//RegistryType_ZOOKEEPER RegistryType = 3 // zookeeper
 )
@@ -38,19 +38,20 @@ func (t RegistryType) String() string {
 		return "RegistryType_MDNS"
 	case RegistryType_ETCD:
 		return "RegistryType_ETCD"
-	//case RegistryType_CONSUL:
-	//	return "RegistryType_CONSUL"
-	//case RegistryType_ZOOKEEPER:
-	//	return "RegistryType_ZOOKEEPER"
+		//case RegistryType_CONSUL:
+		//	return "RegistryType_CONSUL"
+		//case RegistryType_ZOOKEEPER:
+		//	return "RegistryType_ZOOKEEPER"
 	}
 	return "RegistryType_Unknown"
 }
 
 type ServerOption struct {
-	ServiceName string   // register service name [required]
-	RpcAddr     string   // register server RPC address [required]
-	Interval    int      // register interval default 3 seconds [optional]
-	TTL         int      // register TTL default 10 seconds [optional]
+	ServiceName string            // register service name [required]
+	RpcAddr     string            // register server RPC address [required]
+	Interval    int               // register interval default 3 seconds [optional]
+	TTL         int               // register TTL default 10 seconds [optional]
+	Metadata    map[string]string //register node metadata [optional]
 }
 
 type discovery struct {
@@ -68,12 +69,12 @@ type GoRPC struct {
 
 type GoRPCClient struct {
 	registry registry.Registry
-	client client.Client
+	client   client.Client
 }
 
 type GoRPCServer struct {
-	registry registry.Registry
-	server server.Server
+	registry     registry.Registry
+	server       server.Server
 	maxMsgSize   int
 	discovery    *discovery
 	registryType RegistryType
@@ -105,7 +106,7 @@ func NewServer(strRegistry string, option *ServerOption) (s *GoRPCServer) {
 		Interval:    option.Interval,
 		TTL:         option.TTL,
 		Endpoints:   endPoints,
-	})
+	}, option.Metadata)
 }
 
 //sizes: max send or receive msg size in byte
@@ -155,7 +156,7 @@ func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-
 	rpc := grpc.NewService(options...)
 	c = &GoRPCClient{
 		registry: reg,
-		client: rpc.Client(),
+		client:   rpc.Client(),
 	}
 	if err := c.client.Init(optSend, optRecv); err != nil {
 		log.Panic("initialize client option error [%s]", err)
@@ -163,7 +164,7 @@ func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-
 	return c
 }
 
-//NewServer new a go-micro server
-func (g *GoRPC) NewServer(discovery *discovery) (s *GoRPCServer) { // returns go-micro server object
-	return newRpcServer(g.registryType, discovery, g.maxMsgSize)
+//NewServer new a go-micro server with metadata
+func (g *GoRPC) NewServer(discovery *discovery, metadata map[string]string) (s *GoRPCServer) { // returns go-micro server object
+	return newRpcServer(g.registryType, discovery, g.maxMsgSize, metadata)
 }
