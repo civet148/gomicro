@@ -8,3 +8,7 @@ require (
 	github.com/micro/go-micro/v2 v2.9.1
 	google.golang.org/protobuf v1.26.0
 )
+
+replace github.com/micro/go-micro/v2 => ./third-party/micro/v2/go-micro
+
+replace github.com/micro/cli/v2 => ./third-party/micro/v2/cli

@@ -15,3 +15,5 @@
 # vendor/
 /example/client/client
 /example/server/server
+/client
+/server
