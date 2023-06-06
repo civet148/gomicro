@@ -11,4 +11,4 @@ require (
 
 replace github.com/micro/go-micro/v2 => ./third-party/micro/v2/go-micro
 
-replace github.com/micro/cli/v2 => ./third-party/micro/v2/cli
+replace github.com/micro/cli/v2 => github.com/civet148/micro-cli/v2 v2.1.2
