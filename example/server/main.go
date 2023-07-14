@@ -7,6 +7,7 @@ import (
 	"github.com/civet148/gomicro/v2/example/echopb"
 	"github.com/civet148/log"
 	"os"
+	"strconv"
 )
 
 const (
@@ -22,10 +23,20 @@ type EchoServerImpl struct {
 }
 
 func main() {
+	var err error
+	var weight int
 	log.SetLevel("debug")
 	var strRpcAddr = RPC_ADDR
-	if len(os.Args) > 1 {
+	if len(os.Args) == 2 {
 		strRpcAddr = fmt.Sprintf("0.0.0.0:%s", os.Args[1])
+	} else if len(os.Args) == 3 {
+		strRpcAddr = fmt.Sprintf("0.0.0.0:%s", os.Args[1])
+		weight, err = strconv.Atoi(os.Args[2])
+		if err != nil {
+			log.Errorf(err.Error())
+			return
+		}
+		log.Debugf("rpc %s weight %v", strRpcAddr, weight)
 	}
 	ch := make(chan string, 0)
 	srv := gomicro.NewServer(END_POINTS_HTTP_ETCD, &gomicro.ServerOption{
@@ -33,6 +44,7 @@ func main() {
 		RpcAddr:     strRpcAddr,
 		Interval:    3,
 		TTL:         10,
+		Weight:      weight,
 		Metadata: map[string]string{
 			"register_name": "echo-server",
 		},

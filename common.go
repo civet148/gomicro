@@ -13,9 +13,9 @@ import (
 )
 
 /*
-	"etcd://192.168.1.108:2379,192.168.1.109:2379"
-	"consul://192.168.1.108:8500,192.168.1.109:8500"
-	"zk://192.168.1.108:2181, 192.168.1.109:2181"
+"etcd://192.168.1.108:2379,192.168.1.109:2379"
+"consul://192.168.1.108:8500,192.168.1.109:8500"
+"zk://192.168.1.108:2181, 192.168.1.109:2181"
 */
 func ParseRegistry(strRegistry string) (typ RegistryType, endpoints []string) {
 	var strAddress string
@@ -78,7 +78,7 @@ func newOptions(registryType RegistryType, discovery *discovery, reg registry.Re
 	return options
 }
 
-//NewServer new a go-micro server
+// NewServer new a go-micro server
 func newRpcServer(registryType RegistryType, discovery *discovery, maxMsgSize int, md map[string]string) (s *GoRPCServer) { // returns go-micro server object
 	log.Debugf("endpoint type [%v] discovery [%+v]", registryType, discovery)
 	if len(discovery.Endpoints) == 0 {
@@ -100,6 +100,7 @@ func newRpcServer(registryType RegistryType, discovery *discovery, maxMsgSize in
 	rpc := grpc.NewService(options...)
 	opt := sgrpc.MaxMsgSize(maxMsgSize)
 	rpcSvr := rpc.Server()
+	s.weight = discovery.Weight
 	s.server = rpcSvr
 	s.registry = reg
 	s.discovery = discovery

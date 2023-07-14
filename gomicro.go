@@ -2,6 +2,7 @@ package gomicro
 
 import (
 	"context"
+	"fmt"
 	"github.com/civet148/log"
 	"github.com/micro/go-micro/v2/client"
 	cgrpc "github.com/micro/go-micro/v2/client/grpc"
@@ -21,6 +22,7 @@ const (
 	DISCOVERY_DEFAULT_INTERVAL = 3
 	DISCOVERY_DEFAULT_TTL      = 10
 	DEFAULT_RPC_TIMEOUT        = 30
+	LOAD_BALANCE_KEY_WEIGTHT   = "gomicro.LoadBalanceWeight"
 )
 
 type RegistryType int
@@ -51,7 +53,8 @@ type ServerOption struct {
 	RpcAddr     string            // register server RPC address [required]
 	Interval    int               // register interval default 3 seconds [optional]
 	TTL         int               // register TTL default 10 seconds [optional]
-	Metadata    map[string]string //register node metadata [optional]
+	Weight      int               // server weight of load balance [optional]
+	Metadata    map[string]string // register node metadata [optional]
 }
 
 type discovery struct {
@@ -59,6 +62,7 @@ type discovery struct {
 	RpcAddr     string   // register server RPC address [required]
 	Interval    int      // register interval default 3 seconds [optional]
 	TTL         int      // register TTL default 10 seconds [optional]
+	Weight      int      // server weight of load balance [optional]
 	Endpoints   []string // register endpoints of etcd/consul/zookeeper eg. ["192.168.0.10:2379","192.168.0.11:2379"]
 }
 
@@ -73,6 +77,7 @@ type GoRPCClient struct {
 }
 
 type GoRPCServer struct {
+	weight       int
 	registry     registry.Registry
 	server       server.Server
 	maxMsgSize   int
@@ -104,12 +109,13 @@ func NewServer(strRegistry string, option *ServerOption) (s *GoRPCServer) {
 		ServiceName: option.ServiceName,
 		RpcAddr:     option.RpcAddr,
 		Interval:    option.Interval,
+		Weight:      option.Weight,
 		TTL:         option.TTL,
 		Endpoints:   endPoints,
 	}, option.Metadata)
 }
 
-//sizes: max send or receive msg size in byte
+// sizes: max send or receive msg size in byte
 func newGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
 	maxMsgSize := DefaultMaxMsgSize
 	if len(maxSize) != 0 {
@@ -121,27 +127,27 @@ func newGoRPC(registryType RegistryType, maxSize ...int) (g *GoRPC) {
 	}
 }
 
-//NewContext
-//md -> metadata of RPC call, set to nil if have no any meta-data
+// NewContext
+// md -> metadata of RPC call, set to nil if have no any meta-data
 func NewContext(md map[string]string) context.Context {
 	return metadata.NewContext(context.Background(), md)
 }
 
-//NewContextWithTimeout
-//md -> metadata of RPC call, set to nil if have no any meta-data
-//timeout -> timeout seconds of RPC call
+// NewContextWithTimeout
+// md -> metadata of RPC call, set to nil if have no any meta-data
+// timeout -> timeout seconds of RPC call
 func NewContextWithTimeout(md map[string]string, timeout int) (context.Context, context.CancelFunc) {
 	ctx, closer := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 	return metadata.NewContext(ctx, md), closer
 }
 
-//FromContext get metadata from context
+// FromContext get metadata from context
 func FromContext(ctx context.Context) (md metadata.Metadata) {
 	md, _ = metadata.FromContext(ctx)
 	return
 }
 
-//NewClient new a go-micro client
+// NewClient new a go-micro client
 func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-micro client object
 	var options []service.Option
 	log.Debugf("endpoint type [%v] end points [%+v]", g.registryType, endPoints)
@@ -164,7 +170,13 @@ func (g *GoRPC) NewClient(endPoints ...string) (c *GoRPCClient) { // returns go-
 	return c
 }
 
-//NewServer new a go-micro server with metadata
+// NewServer new a go-micro server with metadata
 func (g *GoRPC) NewServer(discovery *discovery, metadata map[string]string) (s *GoRPCServer) { // returns go-micro server object
+	if discovery.Weight > 0 {
+		if metadata == nil {
+			metadata = make(map[string]string)
+		}
+		metadata[LOAD_BALANCE_KEY_WEIGTHT] = fmt.Sprintf("%v", discovery.Weight)
+	}
 	return newRpcServer(g.registryType, discovery, g.maxMsgSize, metadata)
 }
