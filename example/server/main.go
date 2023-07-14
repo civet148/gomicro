@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/civet148/gomicro/v2"
 	"github.com/civet148/gomicro/v2/example/echopb"
 	"github.com/civet148/log"
+	"os"
 )
 
 const (
@@ -21,10 +23,14 @@ type EchoServerImpl struct {
 
 func main() {
 	log.SetLevel("debug")
+	var strRpcAddr = RPC_ADDR
+	if len(os.Args) > 1 {
+		strRpcAddr = fmt.Sprintf("0.0.0.0:%s", os.Args[1])
+	}
 	ch := make(chan string, 0)
 	srv := gomicro.NewServer(END_POINTS_HTTP_ETCD, &gomicro.ServerOption{
 		ServiceName: SERVICE_NAME,
-		RpcAddr:     RPC_ADDR,
+		RpcAddr:     strRpcAddr,
 		Interval:    3,
 		TTL:         10,
 		Metadata: map[string]string{
@@ -35,7 +41,7 @@ func main() {
 		log.Error(err.Error())
 		return
 	}
-
+	log.Infof("micro service starting...")
 	if err := srv.Start(); err != nil {
 		log.Error(err.Error())
 		return

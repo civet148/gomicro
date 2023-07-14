@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"github.com/civet148/gomicro/v2"
 	"github.com/civet148/gomicro/v2/example/echopb"
+	"github.com/civet148/gomicro/v2/strategy"
 	"github.com/civet148/log"
-	"github.com/micro/go-micro/v2/client"
-	"github.com/micro/go-micro/v2/client/selector"
-	"github.com/micro/go-micro/v2/registry"
 	"time"
 )
 
@@ -18,35 +16,25 @@ const (
 )
 
 func main() {
-
+	log.SetLevel("debug")
 	c := gomicro.NewClient(END_POINTS_HTTP_ETCD)
 	service := echopb.NewEchoServerService(SERVICE_NAME, c)
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 20000; i++ {
 		ctx := gomicro.NewContext(map[string]string{
 			"user_name": "lory",
 			"user_id":   fmt.Sprintf("%d", 10000+i),
 		})
 		log.Debugf("send request [%v]", i)
-		opt := SelectorOption()
+		//opt := strategy.RoundRobin() //启用轮询策略(默认)
+		//opt := strategy.Random() //启用随机策略
+		//opt := strategy.Hash([]byte("192.168.2.100")) //启用哈希策略
+		opt := strategy.LeastLoad() //启用最小负载策略
 		if pong, err := service.Call(ctx, &echopb.Ping{Text: "Ping"}, opt); err != nil {
 			log.Error(err.Error())
 		} else {
 			log.Infof("server response [%+v]", pong)
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
-}
-
-func SelectorOption() client.CallOption {
-	return client.WithSelectOption(selector.WithFilter(func(services []*registry.Service) []*registry.Service {
-		for i, s := range services {
-			if len(s.Nodes) == 0 {
-				log.Warnf("selector service[%d] name [%s] nodes is 0", i, s.Name)
-				return services
-			}
-			log.Json("service nodes", s.Nodes)
-		}
-		return services
-	}))
 }
