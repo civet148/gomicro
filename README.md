@@ -12,9 +12,7 @@ golang grpc+go-micro.v2 wrapper
 
 ```shell script
 $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.19.1/protobuf-cpp-3.19.1.tar.gz
-$ tar xvfz protobuf-cpp-3.19.0.tar.gz
-$ cd protobuf-cpp-3.19.0
-$ ./configure && sudo make && sudo make install
+$ tar xvfz protobuf-cpp-3.19.1.tar.gz && cd protobuf-3.19.1 && ./configure && sudo make && sudo make install
 ```
 
 - install protoc-gen-go
